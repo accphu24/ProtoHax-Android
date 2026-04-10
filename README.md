@@ -2,7 +2,10 @@
 
 <img align="right" width="159px" src="https://raw.githubusercontent.com/hax0r31337/ProtoHax/stable/icon.png">
 
+> **Notice:** ProtoHax has been rewritten as a closed-source recode, now available at **[protohax.net](https://protohax.net)**. This repository is kept for reservation purposes only and is no longer actively maintained.
+
 ProtoHax-Android is the Android implementation of [ProtoHax](https://github.com/hax0r31337/ProtoHax), an open-source cheat for Minecraft: Bedrock Edition that works through the network layer. This repository contains the Android-specific code for the cheat.
+
 ## Features
 1. No modifications to Minecraft client
 2. Seamless switching/adapting multiple versions
