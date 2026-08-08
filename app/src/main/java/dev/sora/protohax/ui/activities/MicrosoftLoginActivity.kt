@@ -136,7 +136,7 @@ h1 {
             activity.showLoadingPage("Still loading (0/3)")
             thread {
                 try {
-					val (accessToken, refreshToken) = activity.device.refreshToken(authCode)
+					val (accessToken, refreshToken) = activity.device.refreshToken(authCode, isAuthorizationCode = true)
 					activity.runOnUiThread { activity.showLoadingPage("Still loading (1/3)") }
 					// fetch username through chain
 					val username = try {

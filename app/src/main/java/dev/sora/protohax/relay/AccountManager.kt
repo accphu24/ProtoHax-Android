@@ -78,7 +78,7 @@ class Account(
      */
     fun refresh(): String {
         val isCurrent = AccountManager.currentAccount == this
-		val (accessToken, refreshToken) = platform.refreshToken(refreshToken)
+		val (accessToken, refreshToken) = platform.refreshToken(refreshToken, isAuthorizationCode = false)
         this.refreshToken = refreshToken
         if (isCurrent) {
             // refreshes the token field
