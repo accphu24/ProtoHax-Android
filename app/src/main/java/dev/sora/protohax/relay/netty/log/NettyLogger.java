@@ -29,13 +29,19 @@ public class NettyLogger extends AbstractInternalLogger {
         logs.wipe();
     }
 
+    private static final java.text.SimpleDateFormat TIME_FORMAT =
+        new java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US);
+
     private static void log(final String log) {
+        final String prefix = "[" + TIME_FORMAT.format(new java.util.Date()) + "] ";
         if (log.contains("\n")) {
+            boolean first = true;
             for (String s : log.split("\n")) {
-                logs.add(s);
+                logs.add(first ? prefix + s : s);
+                first = false;
             }
         } else {
-            logs.add(log);
+            logs.add(prefix + log);
         }
     }
 
