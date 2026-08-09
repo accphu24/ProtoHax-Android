@@ -51,6 +51,17 @@ density = resources.displayMetrics.density
             }
             file.delete()
         }
+
+val progressFile = File(filesDir, "connect_progress.txt")
+if (progressFile.exists()) {
+val content = progressFile.readText()
+if (content.isNotBlank()) {
+InternalLoggerFactory.getInstance("ConnectProgress").error(
+"trang thai connect cuoi cung lan chay truoc (co the bi treo o day):\n$content"
+)
+}
+progressFile.delete()
+}
     }
 
     private fun crashLogFile() = File(filesDir, "last_crash.txt")

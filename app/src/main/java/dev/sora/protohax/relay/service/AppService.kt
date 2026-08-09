@@ -22,6 +22,7 @@ import dev.sora.relay.utils.logError
 import dev.sora.relay.utils.logInfo
 import libmitm.Libmitm
 import libmitm.TUN
+import java.io.File
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.NetworkInterface
@@ -34,6 +35,13 @@ class AppService : VpnService() {
     private var vpnDescriptor: ParcelFileDescriptor? = null
     private var tun: TUN? = null
 
+private fun mark(step: String) {
+try {
+File(filesDir, "connect_progress.txt").writeText("${java.util.Date()}: $step")
+} catch (ignored: Throwable) {
+}
+}
+
     override fun onCreate() {
         val notificationManager = getSystemService(Service.NOTIFICATION_SERVICE) as NotificationManager
         if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
@@ -45,13 +53,13 @@ class AppService : VpnService() {
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-		MyApplication.overlayManager.currentContext = this
+MyApplication.overlayManager.currentContext = this
     }
 
     override fun onDestroy() {
-		logInfo("VPN service destroyed")
-		stopVPN()
-		MyApplication.overlayManager.currentContext = null
+logInfo("VPN service destroyed")
+stopVPN()
+MyApplication.overlayManager.currentContext = null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -74,12 +82,14 @@ class AppService : VpnService() {
     }
 
     private fun startVPN() {
+mark("startVPN: bat dau, dang doc IPv6 config")
         val (hasIPv4, hasIPv6) = when(Settings.ipv6Status.getValue(this)) {
-			Settings.IPv6Choices.AUTOMATIC -> checkNetState()
-			Settings.IPv6Choices.ENABLED -> true to true
-			Settings.IPv6Choices.DISABLED -> true to false
-			Settings.IPv6Choices.V6ONLY -> false to true
-		}
+Settings.IPv6Choices.AUTOMATIC -> checkNetState()
+Settings.IPv6Choices.ENABLED -> true to true
+Settings.IPv6Choices.DISABLED -> true to false
+Settings.IPv6Choices.V6ONLY -> false to true
+}
+mark("startVPN: da co IPv6 config (v4=$hasIPv4, v6=$hasIPv6), dang tao VPN Builder")
 
         val builder = Builder()
         builder.setBlocking(true)
@@ -98,7 +108,12 @@ class AppService : VpnService() {
             builder.addRoute("::", 0)
         }
 
-        val vpnDescriptor = builder.establish() ?: return
+mark("startVPN: chuan bi goi builder.establish()")
+        val vpnDescriptor = builder.establish() ?: run {
+mark("startVPN: builder.establish() tra ve null, dung lai")
+return
+}
+mark("startVPN: builder.establish() xong, chuan bi tao TUN")
         this.vpnDescriptor = vpnDescriptor
 
         val tun = TUN().apply {
@@ -112,12 +127,17 @@ class AppService : VpnService() {
             }
         }
         this.tun = tun
+mark("startVPN: da tao TUN object, chuan bi goi tun.start() (nghi ngo cho o day)")
         tun.start()
+mark("startVPN: tun.start() da tra ve xong")
         logInfo("netstack started")
         isActive = true
         try {
-			MinecraftRelay.announceRelayUp()
+mark("startVPN: chuan bi goi MinecraftRelay.announceRelayUp()")
+MinecraftRelay.announceRelayUp()
+mark("startVPN: chuan bi goi serviceListeners.onServiceStarted()")
             serviceListeners.forEach { it.onServiceStarted() }
+mark("startVPN: HOAN TAT toan bo, khong loi gi")
         } catch (t: Throwable) {
             logError("start callback", t)
         }
@@ -125,40 +145,40 @@ class AppService : VpnService() {
 
     private fun stopVPN() {
         isActive = false
-		vpnDescriptor?.close()
-		tun?.let {
-			try {
-				serviceListeners.forEach { l -> l.onServiceStopped() }
-			} catch (t: Throwable) {
-				logError("stop callback", t)
-			}
-			Thread(it::close).start()
-		}
+vpnDescriptor?.close()
+tun?.let {
+try {
+serviceListeners.forEach { l -> l.onServiceStopped() }
+} catch (t: Throwable) {
+logError("stop callback", t)
+}
+Thread(it::close).start()
+}
     }
 
     private fun checkNetState(): Pair<Boolean, Boolean> {
-		val connectivityManager = this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-		val activeNetwork = connectivityManager.getLinkProperties(connectivityManager.activeNetwork ?: return true to false) ?: return true to false
-		val interfaceName = activeNetwork.interfaceName
+val connectivityManager = this.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+val activeNetwork = connectivityManager.getLinkProperties(connectivityManager.activeNetwork ?: return true to false) ?: return true to false
+val interfaceName = activeNetwork.interfaceName
 
-		val networkInterfaces = NetworkInterface.getNetworkInterfaces()
-		while (networkInterfaces.hasMoreElements()) {
-			val ni = networkInterfaces.nextElement()
-			if (ni.name != interfaceName) continue
+val networkInterfaces = NetworkInterface.getNetworkInterfaces()
+while (networkInterfaces.hasMoreElements()) {
+val ni = networkInterfaces.nextElement()
+if (ni.name != interfaceName) continue
 
-			var hasIPv4 = false
-			var hasIPv6 = false
-			for (addr in ni.interfaceAddresses) {
-				if (addr.address is Inet6Address) {
-					hasIPv6 = true
-				} else if (addr.address is Inet4Address) {
-					hasIPv4 = true
-				}
-			}
-			return hasIPv4 to hasIPv6
-		}
+var hasIPv4 = false
+var hasIPv6 = false
+for (addr in ni.interfaceAddresses) {
+if (addr.address is Inet6Address) {
+hasIPv6 = true
+} else if (addr.address is Inet4Address) {
+hasIPv4 = true
+}
+}
+return hasIPv4 to hasIPv6
+}
 
-		return true to false
+return true to false
     }
 
     private fun createNotification(): Notification {
@@ -181,7 +201,7 @@ class AppService : VpnService() {
             .setLargeIcon(BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher))
             .setOngoing(true)
             .setContentIntent(pendingIntent)
-			.addAction(R.drawable.notification_icon, getString(R.string.dashboard_fab_disconnect), pendingIntent1)
+.addAction(R.drawable.notification_icon, getString(R.string.dashboard_fab_disconnect), pendingIntent1)
 
         return builder.build()
     }
