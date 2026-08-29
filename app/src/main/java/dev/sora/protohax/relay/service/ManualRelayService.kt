@@ -86,8 +86,8 @@ class ManualRelayService : Service() {
 		intent.action = Intent.ACTION_MAIN
 		val pendingIntent = PendingIntent.getActivity(this, 0, intent, flag)
 
-		val stopIntent = Intent(ACTION_STOP)
-		stopIntent.setPackage(packageName)
+		val stopIntent = Intent(this, ManualRelayService::class.java)
+		stopIntent.action = ACTION_STOP
 		val pendingIntentStop = PendingIntent.getForegroundService(this, 1, stopIntent, flag)
 
 		return NotificationCompat.Builder(this, CHANNEL_ID)

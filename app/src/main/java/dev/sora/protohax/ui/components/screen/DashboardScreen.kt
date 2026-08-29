@@ -133,8 +133,8 @@ private fun BottomFloatingActionButton(
     val scope = rememberCoroutineScope()
 
     fun connectManualRelay() {
-        val intent = Intent(ManualRelayService.ACTION_START)
-        intent.setPackage(mContext.packageName)
+        val intent = Intent(mContext, ManualRelayService::class.java)
+        intent.action = ManualRelayService.ACTION_START
         mContext.startForegroundService(intent)
 
         scope.launch {
@@ -147,8 +147,8 @@ private fun BottomFloatingActionButton(
     }
 
     fun disconnectManualRelay() {
-        val intent = Intent(ManualRelayService.ACTION_STOP)
-        intent.setPackage(mContext.packageName)
+        val intent = Intent(mContext, ManualRelayService::class.java)
+        intent.action = ManualRelayService.ACTION_STOP
         mContext.startForegroundService(intent)
 
         scope.launch {
