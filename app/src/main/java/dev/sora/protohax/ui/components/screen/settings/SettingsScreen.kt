@@ -10,21 +10,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sora.protohax.R
+import dev.sora.protohax.relay.ManualRelayConfig
 import dev.sora.protohax.ui.activities.LogActivity
 import dev.sora.protohax.ui.components.PHaxAppBar
 import dev.sora.protohax.util.NavigationType
@@ -54,6 +60,44 @@ fun SettingsTab(
 		if (extra != null) {
 			extra()
 		}
+	}
+}
+
+@Composable
+private fun ManualRelayFields() {
+	var host by remember { mutableStateOf(ManualRelayConfig.targetHost) }
+	var port by remember { mutableStateOf(ManualRelayConfig.targetPort.toString()) }
+	var relayPort by remember { mutableStateOf(ManualRelayConfig.relayPort.toString()) }
+
+	Column(modifier = Modifier.padding(18.dp, 0.dp, 18.dp, 10.dp)) {
+		Text(
+			text = stringResource(R.string.manual_relay_hint, relayPort),
+			color = MaterialTheme.colorScheme.outline, fontSize = 13.sp, lineHeight = 17.sp,
+			modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 8.dp)
+		)
+		OutlinedTextField(
+			value = host,
+			onValueChange = { host = it; ManualRelayConfig.targetHost = it },
+			label = { Text(stringResource(R.string.manual_relay_target_host)) },
+			singleLine = true,
+			modifier = Modifier.fillMaxWidth()
+		)
+		androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(4.dp))
+		OutlinedTextField(
+			value = port,
+			onValueChange = { new -> if (new.all { it.isDigit() }) { port = new; new.toIntOrNull()?.let { ManualRelayConfig.targetPort = it } } },
+			label = { Text(stringResource(R.string.manual_relay_target_port)) },
+			singleLine = true,
+			modifier = Modifier.fillMaxWidth()
+		)
+		androidx.compose.foundation.layout.Spacer(modifier = Modifier.padding(4.dp))
+		OutlinedTextField(
+			value = relayPort,
+			onValueChange = { new -> if (new.all { it.isDigit() }) { relayPort = new; new.toIntOrNull()?.let { ManualRelayConfig.relayPort = it } } },
+			label = { Text(stringResource(R.string.manual_relay_local_port)) },
+			singleLine = true,
+			modifier = Modifier.fillMaxWidth()
+		)
 	}
 }
 
@@ -92,6 +136,24 @@ fun SettingsScreen(navigationType: NavigationType) {
 			Settings.settings.forEach {
 				it.Draw(restartRequired)
 			}
+
+			var manualRelayEnabled by remember { mutableStateOf(Settings.manualRelayMode.getValue(mContext)) }
+			SettingsTab(
+				name = R.string.setting_manual_relay, description = R.string.setting_manual_relay_desc,
+				modifier = Modifier.clickable {
+					manualRelayEnabled = !manualRelayEnabled
+					Settings.manualRelayMode.setValue(mContext, manualRelayEnabled)
+				}
+			) {
+				androidx.compose.material3.Switch(
+					manualRelayEnabled, onCheckedChange = null,
+					modifier = Modifier.align(Alignment.CenterEnd)
+				)
+			}
+			if (manualRelayEnabled) {
+				ManualRelayFields()
+			}
+
 			SettingsTab(
 				name = R.string.setting_logs, description = R.string.setting_logs_desc,
 				modifier = Modifier

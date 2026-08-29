@@ -79,7 +79,7 @@ object MinecraftRelay {
 		moduleManager.registerModule(ModuleESP())
 	}
 
-    private fun constructRelay(): Relay {
+    private fun constructRelay(manual: Boolean = false): Relay {
         return Relay(object : MinecraftRelayListener {
             override fun onSessionCreation(session: MinecraftRelaySession): InetSocketAddress {
                 // add listeners
@@ -105,12 +105,18 @@ object MinecraftRelay {
                     session.listeners.add(it)
                 }
 
-                // resolve original ip and pass to relay client
-                val address = session.peer.channel.config().getOption(NativeRakConfig.RAK_NATIVE_TARGET_ADDRESS)
+                val address = if (manual) {
+					// manual relay mode: always forward to the user-configured target,
+					// there is no VPN/TUN to tell us the original destination
+					InetSocketAddress(ManualRelayConfig.targetHost, ManualRelayConfig.targetPort)
+				} else {
+					// resolve original ip and pass to relay client (VPN/TUN mode)
+					session.peer.channel.config().getOption(NativeRakConfig.RAK_NATIVE_TARGET_ADDRESS)
+				}
                 logInfo("SessionCreation $address")
 				return address
             }
-        })
+        }, manual)
     }
 
 	fun updateReliability() {
@@ -118,6 +124,7 @@ object MinecraftRelay {
 			RakReliability.RELIABLE_ORDERED else RakReliability.RELIABLE
 	}
 
+	/** Starts the relay in VPN/TUN mode (existing behavior, requires AppService). */
 	fun announceRelayUp() {
 		if (relay == null) {
 			relay = constructRelay()
@@ -130,9 +137,37 @@ object MinecraftRelay {
 		}
 	}
 
-	class Relay(listener: MinecraftRelayListener) : dev.sora.relay.MinecraftRelay(listener) {
+	/**
+	 * Starts the relay in manual mode: binds a plain RakNet server on
+	 * [ManualRelayConfig.relayPort], no VpnService/TUN required. The user
+	 * points Minecraft directly at this device's LAN IP + relayPort.
+	 */
+	fun announceManualRelayUp() {
+		if (relay != null && relay!!.isRunning) {
+			// tear down any previous instance (e.g. switching modes) before rebinding
+			relay!!.stop()
+		}
+		relay = constructRelay(manual = true)
+		updateReliability()
+		loaderThread?.join()
+		relay!!.bind(InetSocketAddress("0.0.0.0", ManualRelayConfig.relayPort))
+		logInfo("manual relay started on port ${ManualRelayConfig.relayPort} -> ${ManualRelayConfig.targetHost}:${ManualRelayConfig.targetPort}")
+	}
+
+	fun stopManualRelay() {
+		relay?.let {
+			if (it.isRunning) it.stop()
+		}
+		relay = null
+	}
+
+	class Relay(listener: MinecraftRelayListener, private val manual: Boolean = false) : dev.sora.relay.MinecraftRelay(listener) {
 
 		override fun channelFactory(): ChannelFactory<out ServerChannel> {
+			// manual mode: use the standard Netty NIO RakNet server (base class default),
+			// same approach as WClient/OxClientt - no native/VPN dependency
+			if (manual) return super.channelFactory()
+
 			return ChannelFactory {
 				NativeRakServerChannel()
 			}

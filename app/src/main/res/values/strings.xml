@@ -48,6 +48,15 @@
     <string name="setting_restart_required">Restart required to take effect</string>
     <string name="setting_restart_required_action">Restart</string>
     <string name="setting_ip" translatable="false">IPv6</string>
+    <string name="setting_manual_relay">Manual relay (no VPN)</string>
+    <string name="setting_manual_relay_desc">Bind a plain relay server instead of using VpnService/TUN. Use this if the VPN-based connection fails on your device.</string>
+    <string name="manual_relay_target_host">Target server address (IP or domain)</string>
+    <string name="manual_relay_target_port">Target server port</string>
+    <string name="manual_relay_local_port">Relay port (on this device)</string>
+    <string name="manual_relay_hint">Enter this device\'s IP address and port %1$s in Minecraft\'s \"Add Server\" screen. All traffic will be forwarded to the target server below.</string>
+    <string name="manual_relay_notification">Manual relay listening on port %1$d</string>
+    <string name="manual_relay_connected">Relay is up. In Minecraft, add server %1$s : %2$d</string>
+    <string name="manual_relay_not_configured">Please set a target server address in Settings first</string>
     <string name="setting_ip_auto">Auto</string>
     <string name="setting_ip_enabled">Enabled</string>
     <string name="setting_ip_disabled">Disabled</string>

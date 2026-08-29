@@ -50,7 +50,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import dev.sora.protohax.BuildConfig
 import dev.sora.protohax.R
+import dev.sora.protohax.relay.ManualRelayConfig
 import dev.sora.protohax.relay.service.AppService
+import dev.sora.protohax.relay.service.ManualRelayService
+import dev.sora.protohax.ui.components.screen.settings.Settings as PHaxSettings
 import dev.sora.protohax.ui.activities.AppPickerActivity
 import dev.sora.protohax.ui.activities.MainActivity
 import dev.sora.protohax.ui.components.AppIcon
@@ -58,10 +61,12 @@ import dev.sora.protohax.ui.components.CardCurrentApplication
 import dev.sora.protohax.ui.components.CardLoginAlert
 import dev.sora.protohax.ui.components.HyperlinkText
 import dev.sora.protohax.ui.components.PHaxAppBar
+import dev.sora.protohax.ui.components.manualRelayConnectionState
 import dev.sora.protohax.ui.navigation.PHaxTopLevelDestination
 import dev.sora.protohax.util.ContextUtils.isAppExists
 import dev.sora.protohax.util.ContextUtils.toast
 import dev.sora.protohax.util.NavigationType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 
 private fun getTargetPackage(ctx: Context): String {
@@ -116,6 +121,7 @@ fun DashboardScreen(
     }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 private fun BottomFloatingActionButton(
     connectionState: State<Boolean>,
@@ -125,6 +131,33 @@ private fun BottomFloatingActionButton(
 ) {
     val mContext = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    fun connectManualRelay() {
+        val intent = Intent(ManualRelayService.ACTION_START)
+        intent.setPackage(mContext.packageName)
+        mContext.startForegroundService(intent)
+
+        scope.launch {
+            val ip = ManualRelayConfig.findLocalIpAddress() ?: "127.0.0.1"
+            snackbarHostState.showSnackbar(
+                message = mContext.getString(R.string.manual_relay_connected, ip, ManualRelayConfig.relayPort),
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
+
+    fun disconnectManualRelay() {
+        val intent = Intent(ManualRelayService.ACTION_STOP)
+        intent.setPackage(mContext.packageName)
+        mContext.startForegroundService(intent)
+
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                message = mContext.getString(R.string.mitm_disconnected),
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     fun connectVPN() {
         val intent = Intent(AppService.ACTION_START)
@@ -176,8 +209,22 @@ private fun BottomFloatingActionButton(
         }
     }
 
+	val manualMode = PHaxSettings.manualRelayMode.getValue(mContext)
+	val manualActive = manualRelayConnectionState().value
+	val isActive = if (manualMode) manualActive else connectionState.value
+
 	ExtendedFloatingActionButton(
 		onClick = {
+			if (manualMode) {
+				if (manualActive) {
+					disconnectManualRelay()
+				} else if (!ManualRelayConfig.isConfigured) {
+					mContext.toast(R.string.manual_relay_not_configured)
+				} else {
+					connectManualRelay()
+				}
+				return@ExtendedFloatingActionButton
+			}
 			if (AppService.isActive) {
 				disconnectVPN()
 			} else if (applicationSelected.value.isEmpty()){
@@ -201,16 +248,16 @@ private fun BottomFloatingActionButton(
 			}
 		},
 		elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-		containerColor = if (connectionState.value) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-		contentColor = if (connectionState.value) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+		containerColor = if (isActive) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+		contentColor = if (isActive) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
 	) {
 		Icon(
 			painter = painterResource(id = R.drawable.notification_icon),
-			contentDescription = stringResource(id = if (connectionState.value) R.string.dashboard_fab_disconnect else R.string.dashboard_fab_connect),
+			contentDescription = stringResource(id = if (isActive) R.string.dashboard_fab_disconnect else R.string.dashboard_fab_connect),
 		)
 		Spacer(modifier = Modifier.size(8.dp, 0.dp))
 		Text(
-			text = stringResource(id = if (connectionState.value) R.string.dashboard_fab_disconnect else R.string.dashboard_fab_connect),
+			text = stringResource(id = if (isActive) R.string.dashboard_fab_disconnect else R.string.dashboard_fab_connect),
 			textAlign = TextAlign.Center
 		)
 	}

@@ -15,7 +15,9 @@ object Settings {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) R.string.setting_trust_click_desc else R.string.setting_trust_click_disabled,
 		"TRUST_CLICK", false, override = Build.VERSION.SDK_INT < Build.VERSION_CODES.S, true)
 	val ipv6Status = TabSetting(R.string.setting_ip, "INTERNET_PROTOCOL", IPv6Choices.AUTOMATIC, IPv6Choices.values())
+	val manualRelayMode = BoolSetting(R.string.setting_manual_relay, R.string.setting_manual_relay_desc, "MANUAL_RELAY_MODE", false)
 
+	// manualRelayMode is drawn manually in SettingsScreen (needs to trigger recomposition of the host/port fields below it)
 	val settings = arrayOf(offlineSessionEncryption, enableCommandManager, enableRakReliability, trustClicks, ipv6Status)
 
 	enum class IPv6Choices(override val displayName: Int, override val internalName: String) : TabChoice {

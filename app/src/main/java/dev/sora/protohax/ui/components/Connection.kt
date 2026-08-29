@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import dev.sora.protohax.relay.service.AppService
+import dev.sora.protohax.relay.service.ManualRelayService
 import dev.sora.protohax.relay.service.ServiceListener
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
@@ -39,5 +40,31 @@ fun observeConnectionAsFlow() = callbackFlow {
     // Remove callback when not used
     awaitClose {
         AppService.removeListener(listener)
+    }
+}
+
+@ExperimentalCoroutinesApi
+@Composable
+fun manualRelayConnectionState(): State<Boolean> {
+    return produceState(initialValue = ManualRelayService.isActive) {
+        observeManualRelayConnectionAsFlow().collect { value = it }
+    }
+}
+
+@ExperimentalCoroutinesApi
+fun observeManualRelayConnectionAsFlow() = callbackFlow {
+    val listener = object : ServiceListener {
+        override fun onServiceStarted() {
+            trySend(true)
+        }
+
+        override fun onServiceStopped() {
+            trySend(false)
+        }
+    }
+    ManualRelayService.addListener(listener)
+    trySend(ManualRelayService.isActive)
+    awaitClose {
+        ManualRelayService.removeListener(listener)
     }
 }
