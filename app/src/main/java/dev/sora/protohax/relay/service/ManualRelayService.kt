@@ -48,9 +48,18 @@ class ManualRelayService : Service() {
 			when (intent.action) {
 				ACTION_START -> {
 					startForeground(1, createNotification())
-					MinecraftRelay.announceManualRelayUp()
-					isActive = true
-					serviceListeners.forEach { it.onServiceStarted() }
+					try {
+						MinecraftRelay.announceManualRelayUp()
+						isActive = true
+						serviceListeners.forEach { it.onServiceStarted() }
+					} catch (t: Throwable) {
+						// bind failed (port in use, permission denied, etc) - do NOT
+						// leave a "connected" notification lying to the user
+						logError("manual relay failed to bind", t)
+						stopManualRelay()
+						stopForeground(STOP_FOREGROUND_REMOVE)
+						stopSelf()
+					}
 				}
 				else -> {
 					stopManualRelay()
